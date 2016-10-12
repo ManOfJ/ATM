@@ -1,0 +1,61 @@
+
+gradle.projectsLoaded { gradleObj ->
+  gradleObj.allprojects { project ->
+    project.ext {
+      applyFrom = { String path, Map< String, ? > options = [:] ->
+        def file = project.file( path )
+        if ( file.exists() ) project.apply( [ from: file ] + options )
+      }
+
+      loadConfig = { String path, Map< String, ? > vars = [:] ->
+        new ConfigSlurper().with {
+          it.binding = vars
+          it.parse( project.file( path ).toURI().toURL() )
+      } }
+
+      temporaryDir = project.file( "${ project.buildDir }/tmp" )
+    }
+  }
+
+  gradleObj.rootProject { project ->
+    project.ext {
+      project.apply from: 'config.gradle', to: project.ext
+
+      assert project.eol in [ '\r', '\n', '\r\n' ]
+      assert project.developmentLanguage in [ 'java', 'scala', 'groovy', 'kotlin' ]
+      assert project.jvmLanguageLevel > 1.5
+      assert project.forge.version
+      assert project.forge.mappings
+      assert project.mcmod.package
+      assert project.mcmod.id
+      assert project.mcmod.name
+      assert project.mcmod.version
+      assert project.mcmod.author
+      assert project.archive.groupId
+      assert project.archive.artifactId
+      assert project.archive.version
+
+      maven = project.loadConfig 'maven.gradle', [ project: project ]
+      if ( project.maven.enable )
+      {
+        assert mavenRepositoryUrl ?: project.maven.url
+        assert project.maven.protocol in [ 'file', 'ftp', 'http', 'https', 'scp' ]
+        assert mavenUserName ?: project.maven.auth.user
+        assert ( project.maven.protocol in [ 'ftp', 'http', 'https' ] && mavenPassword ?: project.maven.auth.password ) ||
+               ( project.maven.protocol == 'scp' && project.file( mavenPrivateKey ?: project.maven.auth.privatekey ).exists() )
+
+        project.externalSettings.loadPlugins  << 'maven'
+        project.externalSettings.resolveDependencies << 'maven'
+      }
+      assert project.maven.pom.inceptionYear
+      assert project.maven.pom.licenses && project.maven.pom.licenses.every { it.name && it.url }
+
+    }
+  }
+}
+
+gradle.beforeProject { project ->
+  project.externalSettings.preLoadPlugins.each {
+    project.applyFrom "external/preload-plugins-${ it }.gradle"
+  }
+}

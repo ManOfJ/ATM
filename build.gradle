@@ -1,0 +1,244 @@
+
+buildscript {
+  repositories {
+    jcenter()
+    maven {
+      name = 'forge'
+      url  = 'http://files.minecraftforge.net/maven'
+    }
+  }
+  dependencies {
+    classpath 'net.minecraftforge.gradle:ForgeGradle:2.2-SNAPSHOT'
+  }
+  externalSettings.buildScript.each {
+    applyFrom "external/buildscript-${ it }.gradle", [ to: buildscript ]
+  }
+}
+apply plugin: 'net.minecraftforge.gradle.forge'
+externalSettings.loadPlugins.each {
+  applyFrom "external/load-plugins-${ it }.gradle"
+}
+
+group            = archive.groupId
+archivesBaseName = archive.artifactId
+version          = archive.version
+
+minecraft {
+  version          = forge.version
+  runDir           = 'run'
+  mappings         = forge.mappings
+  makeObfSourceJar = archive.makeSourceJar
+
+  expands.source.tokens.each minecraft.&replace
+  expands.source.files.each  minecraft.&replaceIn
+}
+
+jar.manifest.attributes += archive.manifest.attributes
+
+sourceCompatibility = targetCompatibility = jvmLanguageLevel
+tasks.withType( AbstractCompile ) { task ->
+  task.sourceCompatibility = task.targetCompatibility = jvmLanguageLevel
+  if ( task.hasProperty( 'options' ) ) task.options*.encoding  = 'utf-8'
+}
+
+externalSettings.resolveDependencies.each {
+  applyFrom "external/resolve-dependencies-${ it }.gradle"
+}
+
+processResources {
+  inputs.property 'files',  { expands.resource.files }
+  inputs.property 'tokens', { expands.resource.tokens }
+
+  from( sourceSets.main.resources.srcDirs ) {
+    include expands.resource.files
+    filter( org.apache.tools.ant.filters.ReplaceTokens, tokens: expands.resource.tokens )
+  }
+
+  from( sourceSets.main.resources.srcDirs ) {
+    exclude expands.resource.files
+  }
+}
+
+task setupMyWorkspace {
+  finalizedBy setupDecompWorkspace
+  doLast {
+    project.file( 'init' ).deleteOnExit()
+    project.file( 'init.bat' ).deleteOnExit()
+    project.file( 'README.md' ).delete()
+
+    def readme = project.file( 'README-TEMPLATE.md' )
+    readme.text =
+      readme.text
+        .replace( '@mod_name@', mcmod.name )
+        .replace( '@author@', mcmod.author )
+        .replace( '@inception_year@', rootProject.maven.pom.inceptionYear )
+        .replace( '@licenses@',
+          "このModは以下のライセンスのもとで提供されています${ eol }" +
+          ( rootProject.maven.pom.licenses.collect {
+            "  - [${ it.name }](${ it.url })"
+          }.join( "${ eol }" ) )
+        )
+    readme.renameTo( 'README.md' )
+
+  }
+}
+
+task makeMainSourceDirs {
+  ext.sourceDirs = sourceSets.main."${ developmentLanguage }".srcDirs
+
+  outputs.files project.files( sourceDirs )
+
+  doLast {
+    sourceDirs.each project.&mkdir
+  }
+}
+setupDecompWorkspace.finalizedBy makeMainSourceDirs
+
+task genMcmodInfo {
+  ext {
+    destinationDirs = sourceSets.main.resources.srcDirs
+    paths = destinationDirs.collect { project.file( "${ it }/mcmod.info" ) }
+  }
+
+  if ( !project.hasProperty( 'force' ) )
+  {
+    inputs.property 'modinfo', mcmod.info
+    outputs.files project.files( paths )
+  }
+
+  doLast {
+    destinationDirs.each project.&mkdir
+
+    def json = new groovy.json.JsonBuilder( [ mcmod.info() ] )
+    def text = json.toString()
+
+    paths*.text = text
+  }
+}
+processResources.dependsOn genMcmodInfo
+setupDecompWorkspace.finalizedBy genMcmodInfo
+
+task makeAssetsDir {
+  ext {
+    destinationDirs = sourceSets.main.resources.srcDirs
+    paths = destinationDirs.collect { project.file( "${ it }/assets/${ mcmod.id }" ) }
+  }
+
+  outputs.files project.files( paths )
+
+  doLast {
+    paths.each project.&mkdir
+  }
+}
+
+task genDependencyJSON( dependsOn: [ configurations.runtime, extractUserdev ] ) {
+  ext {
+    destinationDirs = sourceSets.main.resources.srcDirs
+    paths = destinationDirs.collect { project.file( "${ it }/dependencies.json" ) }
+  }
+
+  if ( !project.hasProperty( 'force' ) )
+  {
+    inputs.property 'dependencies', configurations.runtime.files
+    outputs.files project.files( paths )
+  }
+
+  doLast {
+    def defaultLibraries = []
+    def defaultLibrariesText = project.file( "${ extractUserdev.destinationDir }/dev.json" ).text
+    def defaultLibrariesJson = new groovy.json.JsonSlurper().parseText( defaultLibrariesText )
+    defaultLibrariesJson.libraries.each { data ->
+      defaultLibraries << data.name.split( ':' ).take( 2 ).join( ':' )
+    }
+
+    def ignoreUrls = [
+      'https://repo1.maven.org/maven2',
+      'https://jcenter.bintray.com',
+      'https://libraries.minecraft.net',
+      'http://files.minecraftforge.net/maven'
+    ]
+
+    def mavenRepositories = []
+    repositories.withType( MavenArtifactRepository ) {
+      def url = it.url.toString()
+      if ( url.startsWith( 'http' ) && ignoreUrls.every { !url.startsWith( it ) } )
+        mavenRepositories << ( url.endsWith( '/' ) ? url : "${ url }/" )
+    }
+    mavenRepositories << 'https://repo1.maven.org/maven2/'
+    mavenRepositories.unique()
+
+    def ignoreGroups = project.properties[ 'ignoreGroups' ]?.split( ',' )
+    def ignoreArtifacts = project.properties[ 'ignoreArtifacts' ]?.split( ',' )
+    def configuration = configurations.runtime.resolvedConfiguration
+    def dependencies  = configuration.firstLevelModuleDependencies
+    def allModuleArtifacts = dependencies.collect { it.allModuleArtifacts }
+
+    def libraries = []
+    def buildChecksum = { url ->
+      def checksum = [:]
+      try { checksum << [ md5: "${ url }.md5".toURL().text ] } catch ( e ) {}
+      try { checksum << [ sha1: "${ url }.sha1".toURL().text ] } catch ( e ) {}
+      checksum ? [ checksum: checksum ] : [:]
+    }
+
+    allModuleArtifacts.flatten().unique().each { artifact ->
+      def id = artifact.moduleVersion.id
+
+      def groupId = id.group
+      def artifactId = id.name
+      def version = id.version
+      def file = artifact.file
+
+      if ( defaultLibraries.any { it == "$groupId:$artifactId" } ) return
+      if ( ignoreGroups?.any { groupId.startsWith( it ) } ) return
+      if ( ignoreArtifacts?.any { artifactId.startsWith( it ) } ) return
+
+      mavenRepositories.each { baseUrl ->
+
+        def url = "${ baseUrl }${ groupId.replace( '.', '/' ) }/${ artifactId }/${ version }/${ file.name }"
+        try
+        {
+          def urlObj = url.toURL()
+          urlObj.openConnection().with {
+            requestMethod = 'HEAD'
+            connect()
+            if ( responseCode == 200 ) {
+              libraries << [
+                maven: [
+                  url: "${ baseUrl }",
+                  groupId: groupId,
+                  artifactId: artifactId,
+                  version: version
+                ] << buildChecksum( url ),
+                serverreq: true,
+                clientreq: true
+              ]
+            }
+            disconnect()
+          }
+
+        }
+        catch ( err )
+        {
+          logger.warn( err.message )
+        }
+
+      }
+    }
+
+    if ( libraries )
+    {
+      destinationDirs.each project.&mkdir
+
+      def json = new groovy.json.JsonBuilder( [ libraries: libraries ] )
+      def text = json.toString()
+
+      paths*.text = text
+    }
+  }
+}
+processResources.dependsOn genDependencyJSON
+
+externalSettings.createTasks.each {
+  applyFrom "external/create-tasks-${ it }.gradle"
+}
