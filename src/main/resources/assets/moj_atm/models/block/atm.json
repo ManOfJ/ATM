@@ -1,0 +1,7 @@
+{
+    "parent": "block/cube_top",
+    "textures": {
+        "top": "moj_atm:blocks/atm_top",
+        "side": "blocks/iron_block"
+    }
+}

@@ -1,0 +1,8 @@
+tile.moj_atm.atm.name=ATM
+moj_atm.chat.atm.in_use=This ATM is in use
+moj_atm.gui.atm.button.backspace=Backspace
+moj_atm.gui.atm.button.clear=Clear
+moj_atm.gui.atm.button.so_that_level=So That Level
+moj_atm.gui.atm.button.so_that_xp=So That XP
+moj_atm.gui.atm.button.deposit=Deposit
+moj_atm.gui.atm.button.withdrawal=Withdrawal
