@@ -1,0 +1,12 @@
+{
+    "variants": {
+        "facing=north,type=normal": { "model": "moj_atm:atm", "y": 180 },
+        "facing=south,type=normal": { "model": "moj_atm:atm" },
+        "facing=west,type=normal":  { "model": "moj_atm:atm", "y": 90 },
+        "facing=east,type=normal":  { "model": "moj_atm:atm", "y": 270 },
+        "facing=north,type=wall": { "model": "moj_atm:atm", "x": -90, "y": 180 },
+        "facing=south,type=wall": { "model": "moj_atm:atm", "x": -90 },
+        "facing=west,type=wall":  { "model": "moj_atm:atm", "x": -90, "y": 90 },
+        "facing=east,type=wall":  { "model": "moj_atm:atm", "x": -90, "y": 270 }
+    }
+}

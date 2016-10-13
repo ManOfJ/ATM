@@ -1,0 +1,8 @@
+tile.moj_atm.atm.name=ATM
+moj_atm.chat.atm.in_use=このATMは使用中です
+moj_atm.gui.atm.button.backspace=取り消し
+moj_atm.gui.atm.button.clear=クリア
+moj_atm.gui.atm.button.so_that_level=数値のレベルになるように
+moj_atm.gui.atm.button.so_that_xp=数値の経験値になるように
+moj_atm.gui.atm.button.deposit=預け入れる
+moj_atm.gui.atm.button.withdrawal=引き出す

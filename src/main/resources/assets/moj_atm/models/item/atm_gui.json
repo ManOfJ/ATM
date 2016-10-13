@@ -1,0 +1,6 @@
+{
+    "parent": "item/generated",
+    "textures": {
+        "layer0": "moj_atm:blocks/atm_top_active"
+    }
+}
