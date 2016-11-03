@@ -25,7 +25,7 @@ mcmod = [
   package: 'com.manofj.minecraft.moj_atm', // 必須項目
   id:      'moj_atm', // 必須項目
   name:    'ATM', // 必須項目
-  version: '1.10.2-1', // 必須項目
+  version: '1.10.2-2', // 必須項目
   author:  'ManOfJ', // 必須項目
 
   info: { [
