@@ -35,8 +35,8 @@ import com.manofj.minecraft.moj_atm.util.XpUtils
 
 private object GuiScreenATM {
 
-  final val ATM_GUI_TEXTURE   = new ResourceLocation( "textures/gui/demo_background.png" )
-  final val BUTTON_TEXTURE    = new ResourceLocation( "textures/gui/widgets.png" )
+  final val ATM_GUI_TEXTURE = new ResourceLocation( "textures/gui/demo_background.png" )
+  final val BUTTON_TEXTURE  = new ResourceLocation( "textures/gui/widgets.png" )
 
   final val ATM_GUI_ITEM = new ItemStack( ATMItems.ATM_GUI )
 
@@ -44,12 +44,11 @@ private object GuiScreenATM {
   final val TEXT_CLEAR         = ATM.languageKey( "clear", "gui.atm.button" )
   final val TEXT_SO_THAT_LEVEL = ATM.languageKey( "so_that_level", "gui.atm.button" )
   final val TEXT_SO_THAT_XP    = ATM.languageKey( "so_that_xp", "gui.atm.button" )
-
   final val TEXT_DEPOSIT       = ATM.languageKey( "deposit", "gui.atm.button" )
   final val TEXT_WITHDRAWAL    = ATM.languageKey( "withdrawal", "gui.atm.button" )
 
   final val MAX_LEVEL = XpUtils.xpToLv( Int.MaxValue )
-  final val INT_MAX = UnsignedLong.valueOf( Int.MaxValue )
+  final val INT_MAX   = UnsignedLong.valueOf( Int.MaxValue )
 
 
   implicit def int2UnsignedLong( i: Int ): UnsignedLong = UnsignedLong.valueOf( i )
@@ -69,19 +68,19 @@ private object GuiScreenATM {
 class GuiScreenATM( player: EntityPlayer, atm: TileEntityATM )
   extends GuiScreen
 {
-  import GuiScreenATM._
+  import com.manofj.minecraft.moj_atm.gui.GuiScreenATM._
 
 
+  private[ this ] var guiTop    = 0
+  private[ this ] var guiLeft   = 0
   private[ this ] var guiWidth  = 248
   private[ this ] val guiHeight = 200
-  private[ this ] var guiTop = 0
-  private[ this ] var guiLeft = 0
 
-  private[ this ] val headModel = new ModelHumanoidHead
+  private[ this ] val headModel  = new ModelHumanoidHead
   private[ this ] var playerSkin = DefaultPlayerSkin.getDefaultSkinLegacy
 
   private[ this ] val numberFormat = NumberFormat.getIntegerInstance
-  private[ this ] var amount = 0L
+  private[ this ] var amount  = 0L
   private[ this ] var balance = UnsignedLong.ZERO
 
 
@@ -125,6 +124,7 @@ class GuiScreenATM( player: EntityPlayer, atm: TileEntityATM )
 
     Option( player.getGameProfile ).foreach { profile =>
       val map = mc.getSkinManager.loadSkinFromCache( profile )
+
       if ( map.containsKey( Type.SKIN ) ) {
         playerSkin = mc.getSkinManager.loadSkin( map.get( Type.SKIN ), Type.SKIN )
       }
@@ -261,12 +261,12 @@ class GuiScreenATM( player: EntityPlayer, atm: TileEntityATM )
 
   override def drawScreen( mouseX: Int, mouseY: Int, partialTicks: Float ): Unit = {
     import scala.collection.convert.WrapAsScala.asScalaBuffer
-    import scala.collection.mutable.{ArrayBuffer => List}
+    import scala.collection.mutable.{ ArrayBuffer => List }
 
 
     drawDefaultBackground()
 
-    GuiUtils.drawContinuousTexturedBox( ATM_GUI_TEXTURE, guiLeft, guiTop, 0, 0, guiWidth, guiHeight, 248, 116, 4, 1/* 現状意味なし */, 2, 2, zLevel )
+    GuiUtils.drawContinuousTexturedBox( ATM_GUI_TEXTURE, guiLeft, guiTop, 0, 0, guiWidth, guiHeight, 248, 166, 4, zLevel )
 
     mc.getTextureManager.bindTexture( playerSkin )
     GlStateManager.pushMatrix()
